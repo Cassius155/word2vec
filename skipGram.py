@@ -21,7 +21,7 @@ class skipGram:
         return clean.findall(self.corpus.lower())
     
         
-    def maptoIndex(text):
+    def maptoIndex(self, text):
         """
         Creates a mapping from every unique word in text to an index
         Input: text: List of strings corresponding to training data
@@ -35,17 +35,28 @@ class skipGram:
                 idx+=1
         return word2idx
 
-    def unigramFreq(textIdxs, size, power = 0.75):
-
-        frq = np.zeros(size)
+    def unigramFreq(self, textIdxs, power = 0.75):
+        """
+        Calculates the unigram distribution raised to the 3/4 power
+        Input:  textIdxs: input training text expressed using the index for each word
+                power: power to raise unigram distribution to, default is 3/4
+        Output: List of the unigram distribution probabilities
+        """
+        frq = np.zeros(self.vocabSize)
         for i in textIdxs:
             frq[i] += 1
         frq = frq ** power
         return frq/frq.sum()
 
     def lossFunc(self, word, context, negatives):
+        """
+        Returns calculated loss for given embedings
+        Input:  word: vector embedding of center word
+                context: vector embedding of context word for center word
+                negatives: vector embedings of k negative samples, with k = negSampleRate
+        Output: Returns calculated loss according to the negative sampling objective
+        """
         return -np.log(self.sigmoid(np.dot(context, word))) + np.sum(-np.log(self.sigmoid(-np.dot(negatives, word))))
-    
     
     def textToIndexes(self, text, mapping):
         """
@@ -60,10 +71,15 @@ class skipGram:
         return idxText
 
     def genPositiveSamples(self, textAsIndexes):
+        """
+        Generates positive samples for every word in corpus based on windowSize
+        Input:  textAsIndices: input training text expressed using the index for each word
+        Output: list of lists containing positive samples for every word in vocabulary
+        """
         #Recreate text using word indices and count frequencies
-        self.wordfreqs = self.unigramFreq(textAsIndexes, self.vocabSize)
+        self.wordfreqs = self.unigramFreq(textAsIndexes)
 
-        positiveSamples = []
+        positiveSamples = [None]*self.vocabSize
         for idx, word in enumerate(textAsIndexes):
             if(word == -1):
                 continue
@@ -75,11 +91,20 @@ class skipGram:
                     continue
                 else:
                     sampleInstance.append(textAsIndexes[i])
-            positiveSamples.append(sampleInstance)
+            if(positiveSamples[word] == None):
+                positiveSamples[word] = sampleInstance
+            else:
+                positiveSamples[word].extend(sampleInstance)
         return positiveSamples
     
     def genNegativeSamples(self, word, posSamples):
-        #Generate probabilities excluding positive samples and 
+        """
+        Generates negSamplerate number of negative samples for the given word, according to unigram distribution
+        Input:  word: index of center word to generate negative samples for
+                posSamples: indexes of positive samples for the center word
+        Output: list of indexes of negative samples
+        """
+        #Generate probabilities excluding positive samples and center word
         localFreqs = np.copy(self.wordfreqs)
         localFreqs[word] = 0
         for idx in posSamples:
@@ -89,9 +114,19 @@ class skipGram:
         return np.random.choice(self.vocabSize, size=self.negSampleRate, p=localFreqs)
     
     def sigmoid(self, x):
+        """
+        Applies sigmoid function to specified scalar or vector
+        Input: x: scalar or vector
+        Output: sigmoid function applied to x
+        """
         return 1.0/(1.0+np.exp(-x))
     
     def initWeights(self):
+        """
+        Initialises the weight matrices with random values
+        Output: W1: first layer weight matrix
+                W2: second layer weight matrix
+        """
         W1 = np.random.rand(self.embeddingSize, self.vocabSize)
         W2 = np.random.rand(self.vocabSize, self.embeddingSize)
         return W1, W2
@@ -102,6 +137,9 @@ class skipGram:
         Input:  center: embedding of center word
                 context: embedding of context word
                 negatives: embeddings of k negative samples, k = negSampleRate
+        Output: centerGradient: gradient of loss function with respect to center word embedding
+                contextGradient: gradient of loss function with respect to context word embedding
+                negativeGradients: gradient of loss function with respect to negative sample embeddings
         """
         wordContextSim = np.dot(center, context)
         wordNegativesSim = negatives @ center
@@ -116,12 +154,22 @@ class skipGram:
         return centerGradient, contextGradient, negativesGradients
     
     def train(self, learningRate, epochs):
+        """
+        Trains the model with specified learning rate for specified epochs
+        Input:  learningRate: learning rate of model
+                epochs: number of epochs to train model for
+        Output: W1: Input embedding matrix
+                W2: Output embedding matrix
+                losses: value of loss function after each epoch
+                word2idx: dictionary with word to index pairs
+        """
         #Clean data and return as list of words
         cleanText = self.tokenized
 
         #Create mapping of unique words in corpus to index
-        word2idx = map(cleanText)
+        word2idx = self.maptoIndex(cleanText)
         self.vocabSize = len(word2idx)
+
         W1, W2 = self.initWeights()
         indexText = self.textToIndexes(cleanText, word2idx)
 
@@ -151,10 +199,10 @@ class skipGram:
                     loss = self.lossFunc(W1[:, word], W2[pos, :], W2[negSamples, :])
 
                     epochLoss += loss
-            print(f"Epoch {epoch + 1}/{epochs} | Loss: {epochLoss:.4f} | Pairs: ")
+            print(f"Epoch {epoch + 1}/{epochs} | Loss: {epochLoss:.4f}")
             losses.append(epochLoss)
         return W1, W2, losses, word2idx
 
 if __name__ == "__main__":
-    net = skipGram("inputText.txt", 5, 5, 100)
-    net.train(0.01, 100)
+    net = skipGram("trainingData/inputText.txt", windowSize=5, negSampleRate=15, embeddingSize=100)
+    net.train(0.05, 300)
