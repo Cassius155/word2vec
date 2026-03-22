@@ -10,6 +10,7 @@ The model uses the **Skip-Gram with Negative Sampling (SGNS)** approach from
 Mikolov et al. (2013).
 
 Currently the only training data added is the first chapter of Game of Thrones by George R. R. Martin
+
 ---
 
 ## Reference
