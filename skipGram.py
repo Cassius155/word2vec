@@ -202,7 +202,3 @@ class skipGram:
             print(f"Epoch {epoch + 1}/{epochs} | Loss: {epochLoss:.4f}")
             losses.append(epochLoss)
         return W1, W2, losses, word2idx
-
-if __name__ == "__main__":
-    net = skipGram("trainingData/inputText.txt", windowSize=5, negSampleRate=15, embeddingSize=100)
-    net.train(0.05, 300)
