@@ -4,9 +4,7 @@ Author: Cassius Bicskei
 
 ## What is this?
 
-This project implements Word2Vec from scratch using only NumPy. The goal is to
-train word embeddings on a text corpus so that semantically similar words end up
-close together in vector space.
+This project implements Word2Vec from scratch using only NumPy.
 
 The model uses the **Skip-Gram with Negative Sampling (SGNS)** approach from
 Mikolov et al. (2013).
